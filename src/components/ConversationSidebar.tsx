@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 
 interface Conversation {
   id: string;
@@ -17,6 +18,9 @@ interface ConversationSidebarProps {
   onSelectConversation: (id: string | null) => void;
   onNewChat: () => void;
   refreshTrigger?: number;
+  connectedServersCount: number;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 export default function ConversationSidebar({
@@ -24,6 +28,9 @@ export default function ConversationSidebar({
   onSelectConversation,
   onNewChat,
   refreshTrigger,
+  connectedServersCount,
+  collapsed,
+  onToggleCollapse,
 }: ConversationSidebarProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,26 +97,74 @@ export default function ConversationSidebar({
     }
   };
 
+  // Collapsed state
+  if (collapsed) {
+    return (
+      <div className="h-full flex flex-col bg-gray-50 border-r border-gray-200 w-14">
+        <button
+          onClick={onToggleCollapse}
+          className="p-4 hover:bg-gray-100 transition-colors"
+          title="Expand sidebar"
+        >
+          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        <button
+          onClick={onNewChat}
+          className="mx-2 p-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          title="New Chat"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+
+        <div className="flex-1" />
+
+        <Link
+          href="/settings/mcp"
+          className="mx-2 mb-3 p-2.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors relative"
+          title="MCP Servers"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
+          </svg>
+          {connectedServersCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 text-white text-xs rounded-full flex items-center justify-center">
+              {connectedServersCount}
+            </span>
+          )}
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col bg-gray-50 border-r border-gray-200">
-      {/* Header */}
-      <div className="p-3 border-b border-gray-200">
+      {/* Header with collapse button */}
+      <div className="flex items-center justify-between p-3 border-b border-gray-200">
+        <span className="text-sm font-medium text-gray-700">Conversations</span>
+        <button
+          onClick={onToggleCollapse}
+          className="p-1.5 hover:bg-gray-200 rounded transition-colors"
+          title="Collapse sidebar"
+        >
+          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+          </svg>
+        </button>
+      </div>
+
+      {/* New Chat Button */}
+      <div className="p-3">
         <button
           onClick={onNewChat}
           className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
         >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           New Chat
         </button>
@@ -146,9 +201,6 @@ export default function ConversationSidebar({
                       <span className="text-xs text-gray-500">
                         {formatDate(conversation.updatedAt)}
                       </span>
-                      <span className="text-xs text-gray-400">
-                        {conversation._count.messages} messages
-                      </span>
                     </div>
                   </div>
 
@@ -160,24 +212,10 @@ export default function ConversationSidebar({
                         ? "bg-red-100 text-red-600"
                         : "opacity-0 group-hover:opacity-100 hover:bg-gray-200 text-gray-400 hover:text-gray-600"
                     }`}
-                    title={
-                      deleteConfirm === conversation.id
-                        ? "Click again to confirm"
-                        : "Delete"
-                    }
+                    title={deleteConfirm === conversation.id ? "Click again to confirm" : "Delete"}
                   >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
                 </div>
@@ -186,6 +224,25 @@ export default function ConversationSidebar({
           </div>
         )}
       </div>
+
+      {/* MCP Settings Link */}
+      <div className="p-3 border-t border-gray-200">
+        <Link
+          href="/settings/mcp"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-700"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
+          </svg>
+          <span className="flex-1 text-sm font-medium">MCP Servers</span>
+          {connectedServersCount > 0 && (
+            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+              {connectedServersCount} connected
+            </span>
+          )}
+        </Link>
+      </div>
     </div>
   );
 }
+
