@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 interface Message {
   id: string;
@@ -21,7 +21,9 @@ export default function ChatInterface({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingConversation, setLoadingConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const previousConversationId = useRef<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -30,6 +32,40 @@ export default function ChatInterface({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Load conversation messages when conversationId changes
+  const loadConversation = useCallback(async (id: string) => {
+    setLoadingConversation(true);
+    try {
+      const response = await fetch(`/api/conversations/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        const loadedMessages: Message[] = data.conversation.messages.map(
+          (m: { id: string; role: string; content: string; toolResults?: unknown }) => ({
+            id: m.id,
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            toolResults: m.toolResults as Array<{ tool: string; result: string }> | undefined,
+          })
+        );
+        setMessages(loadedMessages);
+      }
+    } catch (error) {
+      console.error("Failed to load conversation:", error);
+    } finally {
+      setLoadingConversation(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (conversationId && conversationId !== previousConversationId.current) {
+      loadConversation(conversationId);
+    } else if (!conversationId && previousConversationId.current) {
+      // Cleared conversation - reset messages
+      setMessages([]);
+    }
+    previousConversationId.current = conversationId;
+  }, [conversationId, loadConversation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,22 +128,14 @@ export default function ChatInterface({
     }
   };
 
-  const handleNewChat = () => {
-    setMessages([]);
-    onConversationIdChange("");
-  };
-
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <h2 className="text-lg font-semibold text-gray-900">Chat</h2>
-        <button
-          onClick={handleNewChat}
-          className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-        >
-          New Chat
-        </button>
+        {loadingConversation && (
+          <span className="text-sm text-gray-500">Loading...</span>
+        )}
       </div>
 
       {/* Messages */}
